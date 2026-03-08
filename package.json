@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@clack/prompts": "^1.1.0",
+    "@consumet/extensions": "^1.8.8",
+    "colorette": "^2.0.20",
+    "terminal-image": "^4.2.0"
+  }
+}
