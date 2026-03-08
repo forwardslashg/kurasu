@@ -1,4 +1,6 @@
 {
+  "name": "kurasu",
+  "author": "slash",
   "type": "module",
   "dependencies": {
     "@clack/prompts": "^1.1.0",
