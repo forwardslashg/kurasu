@@ -1,7 +1,6 @@
 import * as p from '@clack/prompts';
 import * as c from 'colorette';
 import terminalImage from 'terminal-image';
-import { ICONS } from './utils/icons.js';
 import fs from 'fs';
 import { getUserData } from './anilist.js';
 
@@ -23,7 +22,7 @@ if (name.toLowerCase().includes('burger')) {
   console.log(await terminalImage.file('./assets/burg.jpg', {width: '50%', height: '40%'}));
 }
 
-p.outro(`Nice to meet you, ${c.green(name)}! ${ICONS.ICON_HEART}`);
+p.outro(`Nice to meet you, ${c.green(name)}!`);
 
 const usingAniList = await p.confirm({
   message: 'Do you use AniList integration?',
@@ -60,6 +59,8 @@ if (usingAniList) {
 
     responses.anilistToken = anilistToken;
 }
+
+responses.mpvExtraArgs = '';
 
 // end of fts, push to config.json
 fs.writeFileSync('./config.json', JSON.stringify(responses, null, 2));

@@ -24,7 +24,7 @@ async function getUserData(accessToken) {
 }
 
 async function getWatchingAnime(userId, accessToken) {
-  const res = await fetch("https://graphql.anilist.co", {
+  const res = await fetch(ANILIST_BASE, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

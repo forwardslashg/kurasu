@@ -126,6 +126,20 @@ function findEpisodeByNumber(episodes, episodeNumber) {
   );
 }
 
+function findBestEpisodeCandidate(episodes, episodeNumber) {
+  const exact = findEpisodeByNumber(episodes, episodeNumber);
+  if (exact?.id) {
+    return exact;
+  }
+
+  const target = Number(episodeNumber);
+  if (target === 1 && Array.isArray(episodes) && episodes.length === 1 && episodes[0]?.id) {
+    return episodes[0];
+  }
+
+  return null;
+}
+
 function buildTitleVariants(title) {
   const raw = String(title ?? '').trim();
   const variants = new Set([raw]);
@@ -166,38 +180,32 @@ async function resolveProviderEpisodeCandidates(sourceKey, queries, episodeNumbe
         ...variants.map((query) => titleSimilarity(query, item.title))
       ),
     }))
-    .sort((a, b) => b._similarity - a._similarity)
-    .slice(0, 10);
+    .sort((a, b) => b._similarity - a._similarity);
+
+  const bestSimilarity = candidates[0]?._similarity ?? 0;
+  const minSimilarity = Math.max(0.35, bestSimilarity - 0.15);
+  const narrowedCandidates = candidates
+    .filter((item) => (item?._similarity ?? 0) >= minSimilarity)
+    .slice(0, 8);
 
   const episodeCandidates = [];
 
-  for (const candidate of candidates) {
+  for (const candidate of narrowedCandidates) {
     try {
       const info = await fetchAnimeInfoById(candidate.id);
       const episodes = info?.episodes ?? [];
 
-      const exact = findEpisodeByNumber(episodes, episodeNumber);
-      if (exact?.id) {
-        episodeCandidates.push({
-          anime: info,
-          episode: exact,
-          candidate,
-          isExactNumberMatch: true,
-        });
+      const matchedEpisode = findBestEpisodeCandidate(episodes, episodeNumber);
+      if (!matchedEpisode?.id) {
+        continue;
       }
 
-      for (const ep of episodes.slice(0, 3)) {
-        if (!ep?.id) {
-          continue;
-        }
-
-        episodeCandidates.push({
-          anime: info,
-          episode: ep,
-          candidate,
-          isExactNumberMatch: false,
-        });
-      }
+      episodeCandidates.push({
+        anime: info,
+        episode: matchedEpisode,
+        candidate,
+        isExactNumberMatch: Number(matchedEpisode.number) === Number(episodeNumber),
+      });
     } catch {
       // Keep trying other candidates from this provider.
     }
@@ -345,7 +353,9 @@ export async function fetchEpisodeSourcesAuto(params = {}) {
   const streamSets = [];
   const probeLanguages = ['sub', 'dub'];
 
-  const sourceSupportsLanguageProbe = (key) => ['hianime', 'animekai', 'animepahe'].includes(key);
+  // AnimePahe does not accept a language parameter at request time; probing both
+  // languages causes duplicate network calls against the same endpoint.
+  const sourceSupportsLanguageProbe = (key) => ['hianime', 'animekai'].includes(key);
 
   for (const sourceKey of providerOrder) {
     try {
@@ -391,7 +401,7 @@ export async function fetchEpisodeSourcesAuto(params = {}) {
                 const resolvedSource = await fetchEpisodeSourcesById(scopedEpisodeId, {
                   source: sourceKey,
                   subOrDub: lang,
-                  retryOnNoSources: false,
+                  retryOnNoSources: true,
                 });
                 const sources = Array.isArray(resolvedSource?.sources) ? resolvedSource.sources : [];
 
@@ -439,7 +449,7 @@ export async function fetchEpisodeSourcesAuto(params = {}) {
             const resolvedSource = await fetchEpisodeSourcesById(scopedEpisodeId, {
               source: sourceKey,
               subOrDub: lang,
-              retryOnNoSources: false,
+              retryOnNoSources: true,
             });
             const sources = Array.isArray(resolvedSource?.sources) ? resolvedSource.sources : [];
 
